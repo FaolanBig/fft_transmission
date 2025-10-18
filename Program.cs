@@ -173,19 +173,60 @@ namespace fft_transmission
         static double[] ReadWav(string path, out int channels, out int sampleRate)
         {
             using var br = new BinaryReader(File.OpenRead(path));
-            br.ReadBytes(22);
-            channels = br.ReadInt16();
-            sampleRate = br.ReadInt32();
-            br.ReadBytes(6);
-            short bitsPerSample = br.ReadInt16();
-            br.ReadBytes(8);
-            int dataSize = br.ReadInt32();
-            int samplesCount = dataSize / (bitsPerSample / 8);
-            double[] samples = new double[samplesCount];
-            for (int i = 0; i < samplesCount; i++)
-                samples[i] = br.ReadInt16();
+
+            // Header lesen
+            string riff = new string(br.ReadChars(4)); // "RIFF"
+            int fileSize = br.ReadInt32();
+            string wave = new string(br.ReadChars(4)); // "WAVE"
+
+            channels = 1;
+            sampleRate = 44100;
+            short bitsPerSample = 16;
+            byte[] dataBytes = Array.Empty<byte>();
+
+            while (br.BaseStream.Position < br.BaseStream.Length)
+            {
+                string chunkId = new string(br.ReadChars(4));
+                int chunkSize = br.ReadInt32();
+
+                if (chunkId == "fmt ")
+                {
+                    short audioFormat = br.ReadInt16();
+                    channels = br.ReadInt16();
+                    sampleRate = br.ReadInt32();
+                    int byteRate = br.ReadInt32();
+                    short blockAlign = br.ReadInt16();
+                    bitsPerSample = br.ReadInt16();
+                    br.BaseStream.Seek(chunkSize - 16, SeekOrigin.Current);
+                }
+                else if (chunkId == "data")
+                {
+                    dataBytes = br.ReadBytes(chunkSize);
+                    break; // fertig
+                }
+                else
+                {
+                    // Unbekannten Chunk überspringen
+                    br.BaseStream.Seek(chunkSize, SeekOrigin.Current);
+                }
+            }
+
+            if (dataBytes.Length == 0)
+                throw new Exception("Kein 'data'-Chunk in WAV-Datei gefunden.");
+
+            int bytesPerSample = bitsPerSample / 8;
+            int sampleCount = dataBytes.Length / bytesPerSample;
+            double[] samples = new double[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                short sample = BitConverter.ToInt16(dataBytes, i * 2);
+                samples[i] = sample;
+            }
+
             return samples;
         }
+
     }
 
 }
