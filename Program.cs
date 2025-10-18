@@ -1,6 +1,6 @@
 ﻿/*
     <one line to give the program's name and a brief idea of what it does.>
-    Copyright (C) <year>  <name of author>
+    Copyright (C) 2025  Carl Öttinger
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -37,8 +37,8 @@ namespace fft_transmission
         {
             if (args.Length < 2)
             {
-                Console.WriteLine("Usage:" +
-                    "fftt encode <input-file>" +
+                Console.WriteLine("Usage:\n" +
+                    "fftt encode <input-file>\n" +
                     "fftt decode <audio-file>");
                 return;
             }
