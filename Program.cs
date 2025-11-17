@@ -20,6 +20,8 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using MathNet.Numerics.IntegralTransforms;
+using BigLog;
+using MathNet.Numerics;
 
 
 namespace fft_transmission
@@ -31,27 +33,81 @@ namespace fft_transmission
         const double SilenceDuration = 0.05; // 50 ms
         const int BitsPerBlock = 32;       // 4 Bytes
         const double BaseFreq = 500.0;
-        const double FreqStep = 20.0;
+        const double FreqStep = 75.0; // old 20.0, 50.0 works best
+
+        static Logger logger = new Logger()
+        {
+            LogToFile = true,
+            TimeStampPrefix = "[fftt] <",
+            PrePrefix = "> ==> ",
+            FileName = "fftt.log",
+            LogToTerminal = true,
+            ColorLevelPrefix = true,
+            /*PrefixInf = "[INFO] ",
+            PrefixSuc = "[SUCCESS] ",
+            PrefixWar = "[WARNING] ",
+            PrefixErr = "[ERROR] ",
+            PrefixCustom = "[CUSTOM] "*/
+            PrefixInf = "[INF] ",
+            PrefixSuc = "[SUC] ",
+            PrefixWar = "[WAR] ",
+            PrefixErr = "[ERR] ",
+            PrefixCustom = "[CTM] "
+        };
 
         static void Main(string[] args)
         {
-            if (args.Length < 2)
+            if (args.Length != 2)
             {
-                Console.WriteLine("Usage:\n" +
+                /*Console.WriteLine("Usage:\n" +
                     "fftt encode <input-file>\n" +
-                    "fftt decode <audio-file>");
+                    "fftt decode <audio-file>");*/
+                logger.Err("invalid arguments");
+                logger.Inf("usage:");
+                logger.Inf("    fftt encode <input-file>");
+                logger.Inf("    fftt decode <audio-file>");
                 return;
             }
 
-            if (args[0] == "encode") Encode(args[1]);
-            else if (args[0] == "decode") Decode(args[1]);
+            if (args[0] == "encode") 
+            {
+                if (!File.Exists(args[1])) { logger.Err("input file not found at " + Path.GetFullPath(args[1])); }
+                else
+                {
+                    logger.Inf("starting engine");
+                    Encode(args[1]);
+                }
+            }
+            else if (args[0] == "decode") 
+            {
+                if (!File.Exists(args[1])) { logger.Err("input file not found at " + Path.GetFullPath(args[1])); }
+                else
+                {
+                    logger.Inf("starting engine");
+                    Decode(args[1]);
+                }
+            }
+            else
+            {
+                logger.Err("invalid arguments");
+                logger.Inf("usage:");
+                logger.Inf("    fftt encode <input-file>");
+                logger.Inf("    fftt decode <audio-file>");
+                return;
+            }
+            logger.Inf("bye from fftt :)");
+            logger.Inf("closing");
         }
 
         static void Encode(string inputPath)
         {
+            logger.Inf("encoding file");
+            logger.Inf("opening and reading input file at " + inputPath);
             byte[] data = File.ReadAllBytes(inputPath);
+            logger.Suc("read " + new FileInfo(inputPath).Length + " bytes");
             var samples = new List<short>();
 
+            logger.Inf("processing");
             for (int i = 0; i < data.Length; i += 4)
             {
                 byte[] block = data.Skip(i).Take(4).ToArray();
@@ -60,13 +116,16 @@ namespace fft_transmission
 
                 samples.AddRange(EncodeBlock(block));
             }
-
+            logger.Suc("building complete, writing output file");
             WriteWav(samples.ToArray(), "encoded.wav");
-            Console.WriteLine("Encoded to encoded.wav");
+            logger.Suc("wrote " + samples.Count * sizeof(short) + " bytes");
+            //Console.WriteLine("Encoded to encoded.wav");
+            logger.Suc($"encoded to encoded.wav at {Path.GetFullPath("encoded.wav")}");
         }
 
         static IEnumerable<short> EncodeBlock(byte[] block)
         {
+            //logger.Inf("encoding block: " + BitConverter.ToString(block)); // might comment out for less resource usage
             int samplesCount = (int)(SampleRate * ToneDuration);
             double[] buffer = new double[samplesCount];
 
@@ -101,9 +160,13 @@ namespace fft_transmission
 
         static void Decode(string wavPath)
         {
+            logger.Inf("decoding file");
+            logger.Inf("opening and reading wav file at " + Path.GetFullPath(wavPath));
             var samples = ReadWav(wavPath, out int channels, out int sampleRate);
             int blockSamples = (int)(SampleRate * (ToneDuration + SilenceDuration));
             int toneSamples = (int)(SampleRate * ToneDuration);
+            logger.Suc("loaded " + samples.Length * sizeof(short) + " bytes");
+            logger.Suc("found: " + samples.Length + " samples, " + channels + " channels, " + sampleRate + " Hz");
             List<byte> output = new();
 
             for (int pos = 0; pos + blockSamples <= samples.Length; pos += blockSamples)
@@ -112,9 +175,14 @@ namespace fft_transmission
                 byte[] decoded = DecodeBlock(toneBlock);
                 output.AddRange(decoded);
             }
-
+            logger.Suc("decoded " + output.Count + " bytes");
+            logger.Inf("writing output file");
             File.WriteAllBytes("decoded.bin", output.ToArray());
-            Console.WriteLine("Decoded to decoded.bin");
+            //logger.Suc($"wrote {output.Count} bytes ({output.Count / 4.0} blocks à 4 bytes)");
+            //logger.Suc($"wrote {output.Count} bytes ({output.Count / decodedBlockSize} blocks)");
+            logger.Suc($"wrote {output.Count} bytes");
+            //Console.WriteLine("Decoded to decoded.bin");
+            logger.Suc($"decoded to decoded.bin at {Path.GetFullPath("decoded.bin")}");
         }
 
         static byte[] DecodeBlock(double[] samples)
