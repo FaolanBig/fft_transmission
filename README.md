@@ -140,6 +140,3 @@ Dieses Projekt steht unter der GNU Affero General Public License Version 3 oder 
 Die vollständige Lizenz ist verfügbar unter:
 
 [https://www.gnu.org/licenses/](https://www.gnu.org/licenses/)
-
-```
-```
