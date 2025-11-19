@@ -133,10 +133,12 @@ Das Programm verwendet die [BigLog](https://biglog.bigvault.cloud)-Bibliothek f�
 
 Dies erleichtert das Debugging während der Entwicklung und Analyse.
 
-## Lizenz
+## Lizenz und Copyright
 
 Dieses Projekt steht unter der GNU Affero General Public License Version 3 oder später.
 
 Die vollständige Lizenz ist verfügbar unter:
 
 [https://www.gnu.org/licenses/](https://www.gnu.org/licenses/)
+
+Copyright © 2025 Carl Öttinger. Alle Rechte vorbehalten
